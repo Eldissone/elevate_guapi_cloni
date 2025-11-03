@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Prepare data object - only include fields relevant to the tipo
     const ipData: any = {
       tipo: tipoIP,
-      nome,
+      nome: nomeTrimmed,
       ativo: true,
     };
 
