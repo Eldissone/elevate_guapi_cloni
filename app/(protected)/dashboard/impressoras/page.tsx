@@ -114,14 +114,23 @@ export default function ImpressorasPage() {
 
   const fetchImpressoras = async () => {
     try {
+      console.log('Buscando impressoras...');
       const response = await fetch(`/api/impressoras?page=${page}`);
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
-        setImpressoras(data.impressoras);
-        setTotalPages(data.pagination.pages);
+        console.log('Impressoras recebidas:', data.impressoras?.length || 0);
+        console.log('Impressoras data:', data);
+        const impressorasArray = Array.isArray(data.impressoras) ? data.impressoras : [];
+        console.log('Definindo impressoras no estado:', impressorasArray.length);
+        setImpressoras(impressorasArray);
+        setTotalPages(data.pagination?.pages || 1);
+      } else {
+        console.error('Error fetching impressoras:', response.statusText, data);
+        setImpressoras([]);
       }
     } catch (error) {
       console.error('Error fetching impressoras:', error);
+      setImpressoras([]);
     } finally {
       setLoading(false);
     }

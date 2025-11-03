@@ -32,23 +32,115 @@ export async function GET(request: NextRequest) {
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const [impressoras, total] = await Promise.all([
+    const [impressorasRaw, total] = await Promise.all([
       Impressora.find({}).populate('faixa').populate({ path: 'modelo', populate: { path: 'marca' } }).populate('tipo').sort({ createdAt: -1 }).skip(skip).limit(limit),
       Impressora.countDocuments({}),
     ]);
 
+    console.log('Impressoras encontradas (raw):', impressorasRaw.length);
+
+    // Serialize impressoras to plain objects
+    const impressoras = impressorasRaw.map(impressora => {
+      const impressoraObj: any = {
+        _id: impressora._id.toString(),
+        setor: impressora.setor,
+        numeroSerie: impressora.numeroSerie,
+        enderecoIP: impressora.enderecoIP,
+        categoria: impressora.categoria || null,
+        createdAt: impressora.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: impressora.updatedAt?.toISOString() || new Date().toISOString(),
+      };
+
+      // Serialize tipo
+      if (impressora.tipo) {
+        if (typeof impressora.tipo === 'object' && '_id' in impressora.tipo && 'nome' in impressora.tipo) {
+          impressoraObj.tipo = {
+            _id: impressora.tipo._id.toString(),
+            nome: impressora.tipo.nome
+          };
+        } else {
+          impressoraObj.tipo = {
+            _id: impressora.tipo.toString(),
+            nome: 'N/A'
+          };
+        }
+      } else {
+        impressoraObj.tipo = null;
+      }
+
+      // Serialize modelo (with marca nested)
+      if (impressora.modelo) {
+        if (typeof impressora.modelo === 'object' && '_id' in impressora.modelo) {
+          const modelo = impressora.modelo as any;
+          impressoraObj.modelo = {
+            _id: modelo._id.toString(),
+            nome: modelo.nome || 'N/A',
+            marca: modelo.marca ? {
+              _id: typeof modelo.marca === 'object' && '_id' in modelo.marca 
+                ? modelo.marca._id.toString() 
+                : modelo.marca.toString(),
+              nome: typeof modelo.marca === 'object' && 'nome' in modelo.marca 
+                ? modelo.marca.nome 
+                : 'N/A'
+            } : null
+          };
+        } else {
+          impressoraObj.modelo = {
+            _id: impressora.modelo.toString(),
+            nome: 'N/A',
+            marca: null
+          };
+        }
+      } else {
+        impressoraObj.modelo = null;
+      }
+
+      // Serialize faixa
+      if (impressora.faixa) {
+        if (typeof impressora.faixa === 'object' && '_id' in impressora.faixa) {
+          const faixa = impressora.faixa as any;
+          impressoraObj.faixa = {
+            _id: faixa._id.toString(),
+            tipo: faixa.tipo || null,
+            nome: faixa.nome || 'N/A',
+            faixa: faixa.faixa || null,
+            vlanNome: faixa.vlanNome || null,
+            vlanId: faixa.vlanId || null,
+          };
+        } else {
+          impressoraObj.faixa = {
+            _id: impressora.faixa.toString(),
+            tipo: null,
+            nome: 'N/A',
+            faixa: null,
+            vlanNome: null,
+            vlanId: null,
+          };
+        }
+      } else {
+        impressoraObj.faixa = null;
+      }
+
+      return impressoraObj;
+    });
+
+    console.log('Impressoras serializadas:', impressoras.length);
+    if (impressoras.length > 0) {
+      console.log('Primeira impressora serializada:', JSON.stringify(impressoras[0], null, 2));
+    }
+
     return NextResponse.json({
-      impressoras,
+      impressoras: impressoras || [],
       pagination: {
         total,
         page,
         pages: Math.ceil(total / limit),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching impressoras:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error', impressoras: [] },
       { status: 500 }
     );
   }
