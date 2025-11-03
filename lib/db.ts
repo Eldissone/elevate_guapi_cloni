@@ -31,8 +31,33 @@ async function connectDB(): Promise<typeof mongoose> {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then(async (mongoose) => {
       console.log('MongoDB Connected');
+      
+      // Remove old unique index on enderecoIP if it exists (legacy field)
+      try {
+        const db = mongoose.connection.db;
+        if (db) {
+          const ipsCollection = db.collection('ips');
+          const indexes = await ipsCollection.indexes();
+          const enderecoIPIndex = indexes.find((idx: any) => 
+            idx.name === 'enderecoIP_1' || 
+            (idx.key && idx.key.enderecoIP !== undefined)
+          );
+          
+          if (enderecoIPIndex) {
+            console.log('Removing legacy enderecoIP_1 index...');
+            await ipsCollection.dropIndex(enderecoIPIndex.name);
+            console.log('Legacy index removed successfully');
+          }
+        }
+      } catch (indexError: any) {
+        // Ignore errors if index doesn't exist or can't be dropped
+        if (indexError.code !== 27 && indexError.code !== 26) {
+          console.warn('Warning: Could not drop legacy index:', indexError.message);
+        }
+      }
+      
       return mongoose;
     });
   }
