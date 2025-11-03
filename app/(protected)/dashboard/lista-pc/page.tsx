@@ -134,13 +134,21 @@ export default function ListaPCPage() {
 
   const fetchModelosDisponiveis = async () => {
     try {
+      console.log('Buscando modelos disponíveis para PC...');
       const response = await fetch('/api/modelos');
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
-        setModelosDisponiveis(data.modelos);
+        console.log('Modelos disponíveis recebidos:', data.modelos?.length || 0);
+        const modelosArray = Array.isArray(data.modelos) ? data.modelos : [];
+        console.log('Definindo modelos disponíveis no estado:', modelosArray.length);
+        setModelosDisponiveis(modelosArray);
+      } else {
+        console.error('Error fetching modelos disponíveis:', response.statusText, data);
+        setModelosDisponiveis([]);
       }
     } catch (error) {
       console.error('Error fetching modelos disponíveis:', error);
+      setModelosDisponiveis([]);
     }
   };
 
