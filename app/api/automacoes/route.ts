@@ -125,23 +125,24 @@ export async function POST(request: NextRequest) {
       .populate({ path: 'faixa', model: 'IP', strictPopulate: false })
       .lean();
 
-    // Serialize automacao
-    const automacao = automacaoPopuladaRaw ? {
-      _id: automacaoPopuladaRaw._id.toString(),
-      ip: automacaoPopuladaRaw.ip || '',
-      equipamento: automacaoPopuladaRaw.equipamento || '',
-      porta: automacaoPopuladaRaw.porta || undefined,
-      categoria: automacaoPopuladaRaw.categoria || undefined,
-      faixa: automacaoPopuladaRaw.faixa ? {
-        _id: automacaoPopuladaRaw.faixa._id?.toString() || '',
-        tipo: automacaoPopuladaRaw.faixa.tipo || 'faixa',
-        nome: automacaoPopuladaRaw.faixa.nome || '',
-        faixa: automacaoPopuladaRaw.faixa.faixa || undefined,
-        vlanNome: automacaoPopuladaRaw.faixa.vlanNome || undefined,
-        vlanId: automacaoPopuladaRaw.faixa.vlanId || undefined,
+    // Serialize automacao (findById returns a single document, not an array)
+    const automacaoDoc = automacaoPopuladaRaw as any;
+    const automacao = automacaoDoc ? {
+      _id: automacaoDoc._id.toString(),
+      ip: automacaoDoc.ip || '',
+      equipamento: automacaoDoc.equipamento || '',
+      porta: automacaoDoc.porta || undefined,
+      categoria: automacaoDoc.categoria || undefined,
+      faixa: automacaoDoc.faixa ? {
+        _id: automacaoDoc.faixa._id?.toString() || '',
+        tipo: automacaoDoc.faixa.tipo || 'faixa',
+        nome: automacaoDoc.faixa.nome || '',
+        faixa: automacaoDoc.faixa.faixa || undefined,
+        vlanNome: automacaoDoc.faixa.vlanNome || undefined,
+        vlanId: automacaoDoc.faixa.vlanId || undefined,
       } : undefined,
-      createdAt: automacaoPopuladaRaw.createdAt ? new Date(automacaoPopuladaRaw.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: automacaoPopuladaRaw.updatedAt ? new Date(automacaoPopuladaRaw.updatedAt).toISOString() : new Date().toISOString(),
+      createdAt: automacaoDoc.createdAt ? new Date(automacaoDoc.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: automacaoDoc.updatedAt ? new Date(automacaoDoc.updatedAt).toISOString() : new Date().toISOString(),
     } : null;
 
     return NextResponse.json(
