@@ -80,8 +80,29 @@ export async function POST(request: NextRequest) {
     // Trim nome
     const nomeTrimmed = nome.trim();
     
+    // DEBUG: Check what exists in database
+    const allIPs = await IP.find({});
+    console.log('=== DEBUG: Todos os IPs no banco ===');
+    allIPs.forEach(ip => {
+      console.log(`- ID: ${ip._id}, Tipo: ${ip.tipo}, Nome: "${ip.nome}"`);
+    });
+    console.log('=== Fim DEBUG ===');
+    
+    // Check if exists with exact match (case-sensitive)
+    const existingCheck = await IP.findOne({ 
+      tipo: tipoIP, 
+      nome: nomeTrimmed 
+    });
+    
+    if (existingCheck) {
+      console.log('CONFLITO ENCONTRADO:', existingCheck);
+      return NextResponse.json(
+        { error: `Esta ${tipoIP === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com o nome "${nomeTrimmed}" (ID: ${existingCheck._id})` },
+        { status: 400 }
+      );
+    }
+    
     // Prepare data object - only include fields relevant to the tipo
-    // MongoDB will handle uniqueness check via compound index on { tipo, nome }
     const ipData: any = {
       tipo: tipoIP,
       nome: nomeTrimmed,
