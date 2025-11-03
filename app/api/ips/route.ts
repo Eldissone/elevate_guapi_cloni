@@ -80,6 +80,19 @@ export async function POST(request: NextRequest) {
     // Trim nome
     const nomeTrimmed = nome.trim();
     
+    // Manual check for duplicates (since we removed unique index)
+    const existingIP = await IP.findOne({ 
+      tipo: tipoIP, 
+      nome: nomeTrimmed 
+    });
+    
+    if (existingIP) {
+      return NextResponse.json(
+        { error: `Esta ${tipoIP === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com o nome "${nomeTrimmed}"` },
+        { status: 400 }
+      );
+    }
+    
     // Prepare data object - only include fields relevant to the tipo
     const ipData: any = {
       tipo: tipoIP,
@@ -136,34 +149,6 @@ export async function POST(request: NextRequest) {
       errors: error.errors
     });
     
-    if (error.code === 11000) {
-      // Duplicate key error - check what MongoDB says exists
-      const existingIP = await IP.findOne({
-        tipo: tipoIP,
-        nome: nome.trim()
-      });
-      
-      console.error('MongoDB duplicate key error detected');
-      console.error('Trying to create:', { tipo: tipoIP, nome: nome.trim() });
-      console.error('Existing IP found:', existingIP);
-      console.error('Error keyValue:', error.keyValue);
-      
-      // If we found an existing IP, show its details
-      if (existingIP) {
-        return NextResponse.json(
-          { error: `Esta ${tipoIP === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada. Nome existente: "${existingIP.nome}" (ID: ${existingIP._id})` },
-          { status: 400 }
-        );
-      }
-      
-      // If no existing IP found but MongoDB says duplicate, there's a data inconsistency
-      const tipoFromError = error.keyValue?.tipo || tipoIP || 'faixa';
-      const nomeFromError = error.keyValue?.nome || nome || '';
-      return NextResponse.json(
-        { error: `Erro de índice: possível inconsistência no banco. Tentando criar: tipo="${tipoFromError}", nome="${nomeFromError}"` },
-        { status: 400 }
-      );
-    }
 
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err: any) => err.message);
