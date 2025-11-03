@@ -77,28 +77,11 @@ export async function POST(request: NextRequest) {
 
     console.log('Criando IP/VLAN:', { tipo: tipoIP, nome, faixa, gateway, network, mask });
 
-    // Trim nome for comparison
+    // Trim nome
     const nomeTrimmed = nome.trim();
     
-    console.log('Verificando duplicidade:', { tipo: tipoIP, nome: nomeTrimmed });
-
-    // Check if IP with same tipo and nome already exists (exact match, case-sensitive)
-    const existingIP = await IP.findOne({ 
-      tipo: tipoIP, 
-      nome: nomeTrimmed 
-    });
-    
-    if (existingIP) {
-      console.log('IP/VLAN já existe:', existingIP._id, existingIP.nome);
-      return NextResponse.json(
-        { error: `Esta ${tipoIP === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com o nome "${nomeTrimmed}" para este tipo` },
-        { status: 400 }
-      );
-    }
-
-    console.log('Nenhuma duplicidade encontrada, prosseguindo com criação...');
-
     // Prepare data object - only include fields relevant to the tipo
+    // MongoDB will handle uniqueness check via compound index on { tipo, nome }
     const ipData: any = {
       tipo: tipoIP,
       nome: nomeTrimmed,
@@ -155,23 +138,11 @@ export async function POST(request: NextRequest) {
     });
     
     if (error.code === 11000) {
-      // Check which field caused the duplicate key error
-      console.error('Duplicate key error:', error.keyPattern, error.keyValue);
-      
-      // The compound index is on { tipo, nome }
-      if (error.keyPattern && 'tipo' in error.keyPattern && 'nome' in error.keyPattern) {
-        const tipoFromError = error.keyValue?.tipo || tipoIP || 'faixa';
-        const nomeFromError = error.keyValue?.nome || nome || '';
-        return NextResponse.json(
-          { error: `Esta ${tipoFromError === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com o nome "${nomeFromError}" para este tipo` },
-          { status: 400 }
-        );
-      }
-      
-      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'campo';
+      // Duplicate key error - MongoDB compound index on { tipo, nome }
       const tipoFromError = error.keyValue?.tipo || tipoIP || 'faixa';
+      const nomeFromError = error.keyValue?.nome || nome || '';
       return NextResponse.json(
-        { error: `Esta ${tipoFromError === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com este ${duplicateField === 'nome' ? 'nome' : 'valor'}` },
+        { error: `Esta ${tipoFromError === 'faixa' ? 'faixa' : 'VLAN'} já está cadastrada com o nome "${nomeFromError}" para este tipo` },
         { status: 400 }
       );
     }
