@@ -33,7 +33,13 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     const [impressorasRaw, total] = await Promise.all([
-      Impressora.find({}).populate('faixa').populate({ path: 'modelo', populate: { path: 'marca' } }).populate('tipo').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Impressora.find({})
+        .populate({ path: 'faixa', strictPopulate: false })
+        .populate({ path: 'modelo', populate: { path: 'marca', strictPopulate: false }, strictPopulate: false })
+        .populate({ path: 'tipo', strictPopulate: false })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
       Impressora.countDocuments({}),
     ]);
 
@@ -41,6 +47,7 @@ export async function GET(request: NextRequest) {
 
     // Serialize impressoras to plain objects
     const impressoras = impressorasRaw.map(impressora => {
+      try {
       const impressoraObj: any = {
         _id: impressora._id.toString(),
         setor: impressora.setor,
@@ -121,8 +128,24 @@ export async function GET(request: NextRequest) {
         impressoraObj.faixa = null;
       }
 
-      return impressoraObj;
-    });
+        return impressoraObj;
+      } catch (err: any) {
+        console.error('Erro ao serializar impressora:', err, impressora._id);
+        // Retorna pelo menos os dados básicos
+        return {
+          _id: impressora._id.toString(),
+          setor: impressora.setor || 'N/A',
+          numeroSerie: impressora.numeroSerie || 'N/A',
+          enderecoIP: impressora.enderecoIP || 'N/A',
+          categoria: impressora.categoria || null,
+          tipo: null,
+          modelo: null,
+          faixa: null,
+          createdAt: impressora.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: impressora.updatedAt?.toISOString() || new Date().toISOString(),
+        };
+      }
+    }).filter(Boolean); // Remove qualquer null/undefined
 
     console.log('Impressoras serializadas:', impressoras.length);
     if (impressoras.length > 0) {

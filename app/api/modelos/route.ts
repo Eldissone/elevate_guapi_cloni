@@ -27,13 +27,18 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    const modelosRaw = await Modelo.find({}).populate('marca').sort({ nome: 1 });
+    const modelosRaw = await Modelo.find({})
+      .populate({ path: 'marca', strictPopulate: false })
+      .sort({ nome: 1 });
 
     console.log('Modelos encontrados (raw):', modelosRaw.length);
-    console.log('Primeiro modelo raw:', modelosRaw[0]);
+    if (modelosRaw.length > 0) {
+      console.log('Primeiro modelo raw:', modelosRaw[0]);
+    }
     
     // Convert to plain objects to ensure proper serialization
     const modelos = modelosRaw.map(modelo => {
+      try {
       const marcaObj = modelo.marca;
       let marcaSerializada = null;
       
@@ -53,14 +58,25 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return {
-        _id: modelo._id.toString(),
-        nome: modelo.nome,
-        marca: marcaSerializada,
-        createdAt: modelo.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: modelo.updatedAt?.toISOString() || new Date().toISOString(),
-      };
-    });
+        return {
+          _id: modelo._id.toString(),
+          nome: modelo.nome || 'N/A',
+          marca: marcaSerializada,
+          createdAt: modelo.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: modelo.updatedAt?.toISOString() || new Date().toISOString(),
+        };
+      } catch (err: any) {
+        console.error('Erro ao serializar modelo:', err, modelo._id);
+        // Retorna pelo menos os dados básicos
+        return {
+          _id: modelo._id.toString(),
+          nome: modelo.nome || 'N/A',
+          marca: null,
+          createdAt: modelo.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: modelo.updatedAt?.toISOString() || new Date().toISOString(),
+        };
+      }
+    }).filter(Boolean); // Remove qualquer null/undefined
 
     console.log('Modelos serializados:', modelos.length);
     if (modelos.length > 0) {
