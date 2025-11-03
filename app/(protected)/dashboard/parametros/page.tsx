@@ -221,7 +221,7 @@ export default function ParametrosPage() {
 
     try {
       // Mapear o tipo para a URL correta da API
-      let apiPath = type;
+      let apiPath: string = type;
       if (type === 'sistemas') {
         apiPath = 'sistemas-operacionais';
       }
