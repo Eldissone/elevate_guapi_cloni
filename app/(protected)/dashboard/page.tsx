@@ -64,7 +64,7 @@ export default function DashboardPage() {
         totalUsers: usersRes.ok ? (await usersRes.json()).users.length : 0,
         totalPCs: pcsRes.ok ? (await pcsRes.json()).pagination.total : 0,
         totalIPs: ipsRes.ok ? (await ipsRes.json()).pagination.total : 0,
-        totalEmails: emailsRes.ok ? (await ipsRes.json()).pagination.total : 0,
+        totalEmails: emailsRes.ok ? (await emailsRes.json()).pagination.total : 0,
         totalSenhas: senhasRes.ok ? (await senhasRes.json()).pagination.total : 0,
         totalImpressoras: impressorasRes.ok ? (await impressorasRes.json()).pagination.total : 0,
         totalAutomacoes: automacoesRes.ok ? (await automacoesRes.json()).pagination.total : 0,
