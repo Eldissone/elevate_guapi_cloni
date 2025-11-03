@@ -67,12 +67,24 @@ export default function ParametrosPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchCategorias();
-    fetchMarcas();
-    fetchModelos();
-    fetchTipos();
-    fetchSistemas();
-    fetchServicos();
+    const loadAllData = async () => {
+      try {
+        await Promise.all([
+          fetchCategorias(),
+          fetchMarcas(),
+          fetchModelos(),
+          fetchTipos(),
+          fetchSistemas(),
+          fetchServicos(),
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAllData();
   }, []);
 
   const fetchCategorias = async () => {
@@ -80,7 +92,9 @@ export default function ParametrosPage() {
       const response = await fetch('/api/categorias');
       if (response.ok) {
         const data = await response.json();
-        setCategorias(data.categorias);
+        setCategorias(data.categorias || []);
+      } else {
+        console.error('Error fetching categorias:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching categorias:', error);
@@ -92,7 +106,9 @@ export default function ParametrosPage() {
       const response = await fetch('/api/marcas');
       if (response.ok) {
         const data = await response.json();
-        setMarcas(data.marcas);
+        setMarcas(data.marcas || []);
+      } else {
+        console.error('Error fetching marcas:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching marcas:', error);
@@ -104,7 +120,10 @@ export default function ParametrosPage() {
       const response = await fetch('/api/modelos');
       if (response.ok) {
         const data = await response.json();
-        setModelos(data.modelos);
+        setModelos(data.modelos || []);
+      } else {
+        const errorData = await response.json();
+        console.error('Error fetching modelos:', response.statusText, errorData);
       }
     } catch (error) {
       console.error('Error fetching modelos:', error);
@@ -116,7 +135,9 @@ export default function ParametrosPage() {
       const response = await fetch('/api/tipos');
       if (response.ok) {
         const data = await response.json();
-        setTipos(data.tipos);
+        setTipos(data.tipos || []);
+      } else {
+        console.error('Error fetching tipos:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching tipos:', error);
@@ -128,7 +149,9 @@ export default function ParametrosPage() {
       const response = await fetch('/api/sistemas-operacionais');
       if (response.ok) {
         const data = await response.json();
-        setSistemas(data.sistemas);
+        setSistemas(data.sistemas || []);
+      } else {
+        console.error('Error fetching sistemas operacionais:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching sistemas operacionais:', error);
@@ -140,12 +163,12 @@ export default function ParametrosPage() {
       const response = await fetch('/api/servicos');
       if (response.ok) {
         const data = await response.json();
-        setServicos(data.servicos);
+        setServicos(data.servicos || []);
+      } else {
+        console.error('Error fetching servicos:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching servicos:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -486,13 +509,22 @@ export default function ParametrosPage() {
               </tr>
             </thead>
             <tbody className="bg-[#282c34] divide-y divide-gray-600">
-              {modelos.map((modelo) => (
-                <tr key={modelo._id} className="hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">{modelo.nome}</div>
+              {modelos.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-400">
+                    Nenhum modelo cadastrado
                   </td>
+                </tr>
+              ) : (
+                modelos.map((modelo) => (
+                  <tr key={modelo._id} className="hover:bg-gray-700/50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">{modelo.nome}</div>
+                    </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-300">{modelo.marca.nome}</div>
+                    <div className="text-sm text-gray-300">
+                      {modelo.marca?.nome || 'N/A'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                     {formatDate(modelo.createdAt)}
@@ -509,7 +541,8 @@ export default function ParametrosPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
