@@ -39,118 +39,65 @@ export async function GET(request: NextRequest) {
         .populate({ path: 'tipo', strictPopulate: false })
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Impressora.countDocuments({}),
     ]);
 
-    console.log('Impressoras encontradas (raw):', impressorasRaw.length);
+    console.log('Impressoras encontradas:', impressorasRaw.length);
 
     // Serialize impressoras to plain objects
-    const impressoras = impressorasRaw.map(impressora => {
-      try {
-      const impressoraObj: any = {
+    const impressoras = impressorasRaw.map((impressora: any) => {
+      const obj: any = {
         _id: impressora._id.toString(),
-        setor: impressora.setor,
-        numeroSerie: impressora.numeroSerie,
-        enderecoIP: impressora.enderecoIP,
+        setor: impressora.setor || '',
+        numeroSerie: impressora.numeroSerie || '',
+        enderecoIP: impressora.enderecoIP || '',
         categoria: impressora.categoria || null,
-        createdAt: impressora.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: impressora.updatedAt?.toISOString() || new Date().toISOString(),
+        createdAt: impressora.createdAt?.toString() || new Date().toISOString(),
+        updatedAt: impressora.updatedAt?.toString() || new Date().toISOString(),
       };
 
       // Serialize tipo
-      if (impressora.tipo) {
-        if (typeof impressora.tipo === 'object' && '_id' in impressora.tipo && 'nome' in impressora.tipo) {
-          impressoraObj.tipo = {
-            _id: impressora.tipo._id.toString(),
-            nome: impressora.tipo.nome
-          };
-        } else {
-          impressoraObj.tipo = {
-            _id: impressora.tipo.toString(),
-            nome: 'N/A'
-          };
-        }
+      if (impressora.tipo && impressora.tipo._id) {
+        obj.tipo = {
+          _id: impressora.tipo._id.toString(),
+          nome: impressora.tipo.nome || 'N/A'
+        };
       } else {
-        impressoraObj.tipo = null;
+        obj.tipo = null;
       }
 
-      // Serialize modelo (with marca nested)
-      if (impressora.modelo) {
-        if (typeof impressora.modelo === 'object' && '_id' in impressora.modelo) {
-          const modelo = impressora.modelo as any;
-          impressoraObj.modelo = {
-            _id: modelo._id.toString(),
-            nome: modelo.nome || 'N/A',
-            marca: modelo.marca ? {
-              _id: typeof modelo.marca === 'object' && '_id' in modelo.marca 
-                ? modelo.marca._id.toString() 
-                : modelo.marca.toString(),
-              nome: typeof modelo.marca === 'object' && 'nome' in modelo.marca 
-                ? modelo.marca.nome 
-                : 'N/A'
-            } : null
-          };
-        } else {
-          impressoraObj.modelo = {
-            _id: impressora.modelo.toString(),
-            nome: 'N/A',
-            marca: null
-          };
-        }
+      // Serialize modelo
+      if (impressora.modelo && impressora.modelo._id) {
+        obj.modelo = {
+          _id: impressora.modelo._id.toString(),
+          nome: impressora.modelo.nome || 'N/A',
+          marca: impressora.modelo.marca && impressora.modelo.marca._id ? {
+            _id: impressora.modelo.marca._id.toString(),
+            nome: impressora.modelo.marca.nome || 'N/A'
+          } : null
+        };
       } else {
-        impressoraObj.modelo = null;
+        obj.modelo = null;
       }
 
       // Serialize faixa
-      if (impressora.faixa) {
-        if (typeof impressora.faixa === 'object' && '_id' in impressora.faixa) {
-          const faixa = impressora.faixa as any;
-          impressoraObj.faixa = {
-            _id: faixa._id.toString(),
-            tipo: faixa.tipo || null,
-            nome: faixa.nome || 'N/A',
-            faixa: faixa.faixa || null,
-            vlanNome: faixa.vlanNome || null,
-            vlanId: faixa.vlanId || null,
-          };
-        } else {
-          impressoraObj.faixa = {
-            _id: impressora.faixa.toString(),
-            tipo: null,
-            nome: 'N/A',
-            faixa: null,
-            vlanNome: null,
-            vlanId: null,
-          };
-        }
-      } else {
-        impressoraObj.faixa = null;
-      }
-
-        return impressoraObj;
-      } catch (err: any) {
-        console.error('Erro ao serializar impressora:', err, impressora._id);
-        // Retorna pelo menos os dados básicos
-        return {
-          _id: impressora._id.toString(),
-          setor: impressora.setor || 'N/A',
-          numeroSerie: impressora.numeroSerie || 'N/A',
-          enderecoIP: impressora.enderecoIP || 'N/A',
-          categoria: impressora.categoria || null,
-          tipo: null,
-          modelo: null,
-          faixa: null,
-          createdAt: impressora.createdAt?.toISOString() || new Date().toISOString(),
-          updatedAt: impressora.updatedAt?.toISOString() || new Date().toISOString(),
+      if (impressora.faixa && impressora.faixa._id) {
+        obj.faixa = {
+          _id: impressora.faixa._id.toString(),
+          tipo: impressora.faixa.tipo || null,
+          nome: impressora.faixa.nome || 'N/A',
+          faixa: impressora.faixa.faixa || null,
+          vlanNome: impressora.faixa.vlanNome || null,
+          vlanId: impressora.faixa.vlanId || null,
         };
+      } else {
+        obj.faixa = null;
       }
-    }).filter(Boolean); // Remove qualquer null/undefined
 
-    console.log('Impressoras serializadas:', impressoras.length);
-    if (impressoras.length > 0) {
-      console.log('Primeira impressora serializada:', JSON.stringify(impressoras[0], null, 2));
-    }
+      return obj;
+    });
 
     return NextResponse.json({
       impressoras: impressoras || [],

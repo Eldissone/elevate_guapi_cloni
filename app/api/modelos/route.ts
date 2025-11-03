@@ -29,59 +29,32 @@ export async function GET(request: NextRequest) {
 
     const modelosRaw = await Modelo.find({})
       .populate({ path: 'marca', strictPopulate: false })
-      .sort({ nome: 1 });
+      .sort({ nome: 1 })
+      .lean();
 
-    console.log('Modelos encontrados (raw):', modelosRaw.length);
-    if (modelosRaw.length > 0) {
-      console.log('Primeiro modelo raw:', modelosRaw[0]);
-    }
+    console.log('Modelos encontrados:', modelosRaw.length);
     
-    // Convert to plain objects to ensure proper serialization
-    const modelos = modelosRaw.map(modelo => {
-      try {
-      const marcaObj = modelo.marca;
-      let marcaSerializada = null;
-      
-      if (marcaObj) {
-        if (typeof marcaObj === 'object' && '_id' in marcaObj && 'nome' in marcaObj) {
-          // Marca foi populada corretamente
-          marcaSerializada = {
-            _id: marcaObj._id.toString(),
-            nome: marcaObj.nome
-          };
-        } else {
-          // Marca não foi populada, apenas retorna o ObjectId
-          marcaSerializada = {
-            _id: marcaObj.toString(),
-            nome: 'N/A'
-          };
-        }
+    // Convert to plain objects
+    const modelos = modelosRaw.map((modelo: any) => {
+      const obj: any = {
+        _id: modelo._id.toString(),
+        nome: modelo.nome || '',
+        createdAt: modelo.createdAt?.toString() || new Date().toISOString(),
+        updatedAt: modelo.updatedAt?.toString() || new Date().toISOString(),
+      };
+
+      // Serialize marca
+      if (modelo.marca && modelo.marca._id) {
+        obj.marca = {
+          _id: modelo.marca._id.toString(),
+          nome: modelo.marca.nome || 'N/A'
+        };
+      } else {
+        obj.marca = null;
       }
 
-        return {
-          _id: modelo._id.toString(),
-          nome: modelo.nome || 'N/A',
-          marca: marcaSerializada,
-          createdAt: modelo.createdAt?.toISOString() || new Date().toISOString(),
-          updatedAt: modelo.updatedAt?.toISOString() || new Date().toISOString(),
-        };
-      } catch (err: any) {
-        console.error('Erro ao serializar modelo:', err, modelo._id);
-        // Retorna pelo menos os dados básicos
-        return {
-          _id: modelo._id.toString(),
-          nome: modelo.nome || 'N/A',
-          marca: null,
-          createdAt: modelo.createdAt?.toISOString() || new Date().toISOString(),
-          updatedAt: modelo.updatedAt?.toISOString() || new Date().toISOString(),
-        };
-      }
-    }).filter(Boolean); // Remove qualquer null/undefined
-
-    console.log('Modelos serializados:', modelos.length);
-    if (modelos.length > 0) {
-      console.log('Primeiro modelo serializado:', JSON.stringify(modelos[0], null, 2));
-    }
+      return obj;
+    });
     
     return NextResponse.json({ modelos: modelos || [] });
   } catch (error: any) {
