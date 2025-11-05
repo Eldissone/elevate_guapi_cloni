@@ -120,7 +120,3 @@ npm run dev
 ```
 
 Acesse [http://localhost:3000](http://localhost:3000)
-
-## Licença
-
-Copyright 2025 Elevate Control.
