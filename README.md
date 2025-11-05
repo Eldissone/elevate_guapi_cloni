@@ -123,4 +123,4 @@ Acesse [http://localhost:3000](http://localhost:3000)
 
 ## Licença
 
-Copyright 2025 Elevate Control. Todos os direitos reservados.
+Copyright 2025 Elevate Control.
