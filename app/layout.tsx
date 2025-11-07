@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from 'next/font/google.js';
 import "./globals.css";
 
 // Declarando pesos e display para evitar erros de override
